@@ -1,0 +1,108 @@
+version: '3.8'
+
+services:
+  fastapi_dev:
+    build:
+      context: ./app_api
+      dockerfile: ./Dockerfile.dev
+    container_name: fastapi_app_dev
+    networks:
+      - app_network
+    ports:
+      - "${PORT}:80"
+    depends_on:
+      - db_dev
+      - redis_dev
+    env_file:
+      - env/.env.development
+    environment:
+      - SEAWEEDFS_MASTER_URL=http://seaweedfs_master:9333
+      - SEAWEEDFS_VOLUME_URL=http://seaweedfs_volume:8080
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db_dev/${POSTGRES_DB}
+      - ENV=${ENV}
+      - PORT=${PORT}
+      - REDIS_URL=redis://default:${REDIS_PASSWORD}@redis_dev:${REDIS_PORT}/0
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: '512M'
+        reservations:
+          cpus: '0.25'
+          memory: '256M'
+
+  bot_dev:
+    build:
+      context: ./telegram_app
+      dockerfile: ./Dockerfile
+    container_name: telegram_bot_dev
+    depends_on:
+      - db_dev
+      - redis_dev
+    env_file:
+      - env/.env.development
+    environment:
+      - TELEGRAM_TOKEN=${TELEGRAM_TOKEN}
+      - API_URL=http://fastapi_dev:80
+      - SEAWEEDFS_VOLUME_URL=http://seaweedfs_volume:8080
+    restart: always
+    networks:
+      - app_network
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: '512M'
+        reservations:
+          cpus: '0.25'
+          memory: '256M'
+
+  db_dev:
+    image: postgres:16
+    container_name: postgres_db_dev
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    networks:
+      - app_network
+    volumes:
+      - postgres_data_dev:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: '512M'
+        reservations:
+          cpus: '0.25'
+          memory: '256M'
+
+  redis_dev:
+    image: redis:7.2.4
+    container_name: redis_dev
+    networks:
+      - app_network
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+    ports:
+      - "6380:6379"
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: '256M'
+        reservations:
+          cpus: '0.1'
+          memory: '128M'
+
+volumes:
+  postgres_data_dev:
+
+networks:
+  app_network:
+    external: true

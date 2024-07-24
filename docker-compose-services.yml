@@ -1,0 +1,64 @@
+version: '3.8'
+
+services:
+
+  backup:
+    build:
+      context: ./backups
+      dockerfile: Dockerfile
+    container_name: backup_service
+    networks:
+      - app_network
+    environment:
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${DB_NAME}
+      - DB_HOST=${DB_HOST}
+      - DB_USER_DEV=${DB_USER_DEV}
+      - DB_PASSWORD_DEV=${DB_PASSWORD_DEV}
+      - DB_NAME_DEV=${DB_NAME_DEV}
+      - DB_HOST_DEV=${DB_HOST_DEV}
+    volumes:
+      - ./backups/backup_files:/backups/backup_files
+      - ./backups/log:/var/log
+
+  pgadmin:
+    build: ./pgadmin
+    container_name: pgadmin
+    networks:
+      - app_network
+    ports:
+      - "${PGADMIN_PORT}:8080"
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=${PGADMIN_EMAIL}
+      - PGADMIN_DEFAULT_PASSWORD=${PGADMIN_PASSWORD}
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: '256M'
+        reservations:
+          cpus: '0.1'
+          memory: '128M'
+
+  redisinsight:
+    image: redislabs/redisinsight:latest
+    container_name: redisinsight
+    networks:
+      - app_network
+    restart: always
+    ports:
+      - "5540:5540"
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: '256M'
+        reservations:
+          cpus: '0.1'
+          memory: '128M'
+
+networks:
+  app_network:
+    external: true

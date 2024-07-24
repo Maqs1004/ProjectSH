@@ -1,0 +1,35 @@
+version: '3.8'
+services:
+  seaweedfs_master:
+    image: chrislusf/seaweedfs:latest
+    container_name: seaweedfs_master
+    networks:
+      - app_network
+    ports:
+      - "9333:9333"
+      - "8888:8888"
+    command: "master"
+    volumes:
+      - seaweedfs_master_data:/data
+    restart: always
+
+  seaweedfs_volume:
+    image: chrislusf/seaweedfs:latest
+    container_name: seaweedfs_volume
+    networks:
+      - app_network
+    ports:
+      - "8080:8080"
+      - "18080:18080"
+    command: "volume -mserver seaweedfs_master:9333 -dir /data"
+    volumes:
+      - seaweedfs_volume_data:/data
+    restart: always
+
+volumes:
+  seaweedfs_master_data:
+  seaweedfs_volume_data:
+
+networks:
+  app_network:
+    external: true
